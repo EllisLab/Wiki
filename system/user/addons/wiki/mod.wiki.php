@@ -24,6 +24,7 @@
  */
 class Wiki {
 
+	var $version 				= '';
 	var $base_path				= '';
 	var $profile_path			= '';
 	var $base_url				= '';
@@ -86,6 +87,9 @@ class Wiki {
 		{
 			return;
 		}
+
+		$info = ee('Addon')->get('wiki');
+		$this->version = $info->get('version');
 
 		ee()->lang->loadfile('wiki');
 
