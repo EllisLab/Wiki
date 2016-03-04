@@ -17,8 +17,8 @@ return array(
 		'Category' => 'Model\Category',
 		'CategoryArticle' => 'Model\CategoryArticle',
 		'Search' => 'Model\Search',
-		'Upload' => 'Model\Upload'		
-		
+		'Upload' => 'Model\Upload'
+
 	),
 
 	'models.dependencies' => array(
