@@ -1,0 +1,28 @@
+language: php
+
+php:
+  - 5.4
+  - 5.5
+  - 5.6
+  - 7.0
+
+install:
+  - composer install
+
+script:
+  - system/user/addons/wiki/vendor/bin/parallel-lint --exclude system/user/addons/wiki/vendor .
+
+before_deploy:
+  - composer install --no-dev
+  - zip -r 'Wiki' system/ themes/
+
+deploy:
+  provider: releases
+  api_key:
+    secure: N41BraUShWWNtBy5UdROFC6k7sSSucFtwopzeiaj81qspB/KhO2wRgi5IqiEzj8gnVuGc/LkX8bNVsBT64+uhYAFDzUGp9L/QMb3wtm+LjwZVFIxLbJVdgB02GNwKkzBGUOww/E/6ejhuCknUvQsw2s4y8rBeFa+EydnRXK7QeishEpL5CiwXmDBXlousSjuA6sFE6z9tNxvciN6pKsEdb6+LdGSn03Mm+Nv+AWiYkIHKvW2bNaBzoyIvJ9W+EFpJkh+ih8vTvkA/TPQqo5fxfqDA8n0cJEAL/bCbQ5Edxc8Lr2PoPdW8ylw4RR87mxP0cJBkhDVrcDI/0lNn9rz+FrTBBKXHuK9a0u0k7NjzPktuSnLpG80JG2Toqh2+MPf8IsXnB1SRbUsakryrizvOacUAFPa9djiEdl8AcKIKd4iTCCvtf52W4B7WxIiuR1rGJo/ErIoJq/eczEqTsbjW5EWZQRKv9RibDRE/8W658eJ5x3PitbcchRrpeOcOOkGvdcQcemO6i07sMq+6RlPGMw2L8DughQb3k4IaLsfU5ke9kBsLI1A8QQr5E0+0Zynu8Eys3LQzkwQrtcMG7K9Zj6BaQK2zJQjWWRuEpsiBubGobM5Y8GUtb6aDlhTFspDvFebUfB9NDldv2sdW8ulqheSRkflSTz6w1zULIOsTK4=
+  file: "Wiki.zip"
+  skip_cleanup: true
+  on:
+    php: 7.0
+    tags: true
+    condition: $TRAVIS_PULL_REQUEST = false
