@@ -1206,13 +1206,15 @@ class Wiki {
 		switch ($type)
 		{
 			case 'uncategorized_pages' :
+
 				$this->return_data = str_replace('{wiki:page}', $this->_fetch_template('wiki_special_uncategorized_pages.html'), $this->return_data);
 
 				/** ---------------------------------------
 				/**  Get categorized page ids
 				/** ---------------------------------------*/
 
-				$query = ee()->db->distinct('exp_wiki_category_articles.page_id')
+				$query = ee()->db->distinct()
+							->select('exp_wiki_category_articles.page_id')
 							->from('wiki_category_articles')
 							->join('wiki_page', 'exp_wiki_page.page_id = exp_wiki_category_articles.page_id')
 							->where('wiki_id', $this->wiki_id)
@@ -1907,11 +1909,18 @@ class Wiki {
 
 			if ($page_id != '')
 			{
-				$query = ee()->db->query("SELECT cat_id FROM exp_wiki_category_articles WHERE page_id = '".ee()->db->escape_str($page_id)."'");
+				$query = ee()->db->select('cat_id')
+							->from('wiki_category_articles')
+							->where('page_id', $page_id)
+							->get();
 			}
 			else
 			{
-				$query = ee()->db->query("SELECT DISTINCT cat_id FROM exp_wiki_category_articles");
+				$query = ee()->db->distinct()
+							->select('cat_id')
+							->from('wiki_category_articles')
+							->get();
+
 			}
 
 			if ($query->num_rows() == 0)
