@@ -8,9 +8,9 @@
 
     <channel>
 
-    <title>{exp:xml_encode}{wiki_name}{/exp:xml_encode}</title>
+    <title><![CDATA[{wiki_name}]]></title>
     <link>{path:wiki_home}</link>
-    <description>{exp:xml_encode}{wiki_name}{/exp:xml_encode}</description>
+    <description><![CDATA[{wiki_name}]]></description>
     <dc:language>{language}</dc:language>
     <dc:creator>{webmaster_email}</dc:creator>
     <dc:rights>Copyright {current_time format="%Y"}</dc:rights>
@@ -19,11 +19,11 @@
 
 {wiki:recent_changes}
     <item>
-      <title>{exp:xml_encode}{title}{/exp:xml_encode}</title>
-      <link>{exp:xml_encode}{path:view_article}{/exp:xml_encode}</link>
-      <guid>{exp:xml_encode}{path:view_article}{/exp:xml_encode}</guid>
+      <title><![CDATA[{title}]]></title>
+      <link>{path:view_article}</link>
+      <guid>{path:view_article}</guid>
       <description><![CDATA[{article}]]></description>
-      <dc:subject>{exp:xml_encode}{title}{/exp:xml_encode}</dc:subject>
+      <dc:subject><![CDATA[{title}]]></dc:subject>
       <dc:date>{gmt_revision_date format="%Y-%m-%dT%H:%i:%s%Q"}</dc:date>
     </item>
 {/wiki:recent_changes}

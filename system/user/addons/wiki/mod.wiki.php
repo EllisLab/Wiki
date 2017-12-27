@@ -954,7 +954,7 @@ class Wiki {
 
 		$this->return_data = str_replace('{wiki:page}', $this->_fetch_template('wiki_file.html'), $this->return_data);
 
-		$query = ee()->db->query("SELECT u.*, m.member_id, m.screen_name, m.email, m.url
+		$query = ee()->db->query("SELECT u.*, m.member_id, m.screen_name, m.email
 							 FROM exp_wiki_uploads u, exp_members m
 							 WHERE u.file_name = '".ee()->db->escape_str($topic)."'
 							 AND u.wiki_id = '".ee()->db->escape_str($this->wiki_id)."'
@@ -1280,7 +1280,7 @@ class Wiki {
 		}
 
 		$results = ee()->db->query("SELECT r.*,
-								m.member_id, m.screen_name, m.email, m.url,
+								m.member_id, m.screen_name, m.email,
 								p.page_namespace, p.page_name AS topic
 								FROM exp_wiki_revisions r, exp_members m, exp_wiki_page p
 								WHERE p.last_updated = r.revision_date
@@ -1371,7 +1371,6 @@ class Wiki {
 							'{path:author_profile}'	=> ee()->functions->create_url($this->profile_path.$row['member_id']),
 							'{path:member_profile}'	=> ee()->functions->create_url($this->profile_path.$row['member_id']),
 							'{email}'				=> ee()->typography->encode_email($row['email']),
-							'{url}'					=> prep_url($row['url']),
 							'{revision_notes}'		=> $row['revision_notes'],
 							'{path:view_article}'	=> $link,
 							'{content}'				=> $row['page_content'],
@@ -1515,7 +1514,7 @@ class Wiki {
 		}
 
 		$results = ee()->db->query("SELECT r.*,
-								m.member_id, m.screen_name, m.email, m.url,
+								m.member_id, m.screen_name, m.email,
 								p.page_namespace, p.page_name AS topic ".
 								$sql.
 								$pagination_sql);
@@ -1555,7 +1554,6 @@ class Wiki {
 				'{path:author_profile}'	=> ee()->functions->create_url($this->profile_path.$row['member_id']),
 				'{path:member_profile}'	=> ee()->functions->create_url($this->profile_path.$row['member_id']),
 				'{email}'				=> ($type == 'rss' OR $type == 'atom') ? $row['email'] : ee()->typography->encode_email($row['email']), // No encoding for RSS/Atom
-				'{url}'					=> prep_url($row['url']),
 				'{revision_notes}'		=> $row['revision_notes'],
 				'{path:view_article}'	=> $link,
 				'{content}'				=> $row['page_content'],
@@ -3259,7 +3257,7 @@ class Wiki {
 						ee()->db->limit($parameters['limit']);
 					}
 
-					$query = ee()->db->select("r.*, m.member_id, m.screen_name, m.email, m.url, p.page_namespace, p.page_name AS topic")
+					$query = ee()->db->select("r.*, m.member_id, m.screen_name, m.email, p.page_namespace, p.page_name AS topic")
 						->from('wiki_category_articles ca')
 						->join('wiki_page p', 'ca.page_id = p.page_id')
 						->join('wiki_revisions r', 'p.page_id = r.page_id')
@@ -4443,7 +4441,7 @@ class Wiki {
 			$pagination_sql = " LIMIT ".$parameters['limit'];
 		}
 
-		$query = ee()->db->query("SELECT r.*, m.member_id, m.screen_name, m.email, m.url, p.page_namespace, p.page_name AS topic ".$sql.$pagination_sql);
+		$query = ee()->db->query("SELECT r.*, m.member_id, m.screen_name, m.email, p.page_namespace, p.page_name AS topic ".$sql.$pagination_sql);
 
 		/** ----------------------------------------
 		/**  Global Last Updated
@@ -4502,7 +4500,6 @@ class Wiki {
 				'{author}'				=> $row['screen_name'],
 				'{path:author_profile}'	=> ee()->functions->create_url($this->profile_path.$row['member_id']),
 				'{email}'				=> ee()->typography->encode_email($row['email']),
-				'{url}'					=> prep_url($row['url']),
 				'{revision_notes}'		=> $row['revision_notes'],
 				'{path:view_article}'	=> $link,
 				'{content}'				=> $row['page_content'],
@@ -4636,7 +4633,7 @@ class Wiki {
 		}
 
 		// Start pulling the data
-		ee()->db->select('u.*, m.member_id, m.screen_name, m.email, m.url')
+		ee()->db->select('u.*, m.member_id, m.screen_name, m.email')
 			->from('wiki_uploads u')
 			->join('members m', 'm.member_id = u.upload_author')
 			->where('u.wiki_id', $this->wiki_id)
@@ -4710,7 +4707,6 @@ class Wiki {
 				'{author}'				=> $row['screen_name'],
 				'{path:author_profile}'	=> ee()->functions->create_url($this->profile_path.$row['member_id']),
 				'{email}'				=> ee()->typography->encode_email($row['email']),
-				'{url}'					=> prep_url($row['url']),
 				'{count}'				=> $index + 1
 			);
 

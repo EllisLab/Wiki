@@ -2,7 +2,26 @@
 
 The ExpressionEngine Wiki provides a powerful wiki that integrates seamlessly with ExpressionEngine. See the Wiki [wiki](https://github.com/EllisLab/Wiki/wiki) (wiki!) for a more detailed explanation of what a wiki is and what you can do with it.
 
-The Wiki Module requires ExpressionEngine to function.  
+The Wiki Module requires ExpressionEngine to function.
+
+## Changelog
+
+### 4.0.0
+
+- Updated module to be 4.0 compatible
+
+### 3.0.2
+
+- Fixed MySQL 7 compatibility issue
+
+### 3.0.1
+
+- Travis and composer compatibility
+
+### 3.0.0
+
+- Updated module to be 3.0 compatible
+
 
 ## License
 
