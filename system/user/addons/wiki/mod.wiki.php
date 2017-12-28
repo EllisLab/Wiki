@@ -1256,7 +1256,7 @@ class Wiki {
 
 		$columns = 3;
 
-		if (trim($match['1']) != '' && ($params = ee()->functions->assign_parameters($match['1'])) !== FALSE)
+		if (trim($match['1']) != '' && ($params = ee('Variables/Parser')->parseTagParameters($match['1'])) !== FALSE)
 		{
 			$columns = (isset($params['columns']) && is_numeric($params['columns'])) ? $params['columns'] : $limit;
 		}
@@ -1342,7 +1342,7 @@ class Wiki {
 		$count = 0;
 
 		// added in 1.6 for {switch} variable and for future use
-		$vars = ee()->functions->assign_variables($template);
+		$vars = ee('Variables/Parser')->extractVariables($template);
 		ee()->load->helper('url');
 
 		foreach($results->result_array() as $row)
@@ -1399,7 +1399,7 @@ class Wiki {
 				/** ----------------------------------------*/
 				if (preg_match("/^switch\s*=.+/i", $key))
 				{
-					$sparam = ee()->functions->assign_parameters($key);
+					$sparam = ee('Variables/Parser')->parseTagParameters($key);
 
 					$sw = '';
 
@@ -1452,7 +1452,7 @@ class Wiki {
 		/** ----------------------------------------*/
 
 		$tag_param_string = $match[1];
-		$parameters = ee()->functions->assign_parameters($tag_param_string, array(
+		$parameters = ee('Variables/Parser')->parseTagParameters($tag_param_string, array(
 			'limit'		=> 10,
 			'paginate'	=> 'bottom',
 			'switch'	=> ''
@@ -1651,7 +1651,7 @@ class Wiki {
 			/**  Parameters
 			/** ----------------------------------------*/
 
-			extract(ee()->functions->assign_parameters($match[1], array(
+			extract(ee('Variables/Parser')->parseTagParameters($match[1], array(
 				'limit'			=> 10,
 				'backspace'		=> '',
 				'show_empty'	=> 'y',
@@ -1697,7 +1697,7 @@ class Wiki {
 		$output = ($style == 'nested') ? "<ul id='nav_categories'>\n" : '';
 
 		// added in 1.6 for {switch} and {count} variables and for future use
-		$vars = ee()->functions->assign_variables($template);
+		$vars = ee('Variables/Parser')->extractVariables($template);
 		$count = 0;
 
 		foreach($categories as $key => $category_data)
@@ -1734,7 +1734,7 @@ class Wiki {
 				/** ----------------------------------------*/
 				if (preg_match("/^switch\s*=.+/i", $k))
 				{
-					$sparam = ee()->functions->assign_parameters($k);
+					$sparam = ee('Variables/Parser')->parseTagParameters($k);
 
 					$sw = '';
 
@@ -1790,7 +1790,7 @@ class Wiki {
 					/** ----------------------------------------*/
 					if (preg_match("/^switch\s*=.+/i", $k))
 					{
-						$sparam = ee()->functions->assign_parameters($k);
+						$sparam = ee('Variables/Parser')->parseTagParameters($k);
 
 						$sw = '';
 
@@ -2540,7 +2540,7 @@ class Wiki {
 
 				$revisions = '';
 				$count = 0;
-				$vars = ee()->functions->assign_variables($match['1']);
+				$vars = ee('Variables/Parser')->extractVariables($match['1']);
 
 				foreach ($results->result_array() as $row)
 				{
@@ -2576,7 +2576,7 @@ class Wiki {
 						/** ----------------------------------------*/
 						if (preg_match("/^switch\s*=.+/i", $key))
 						{
-							$sparam = ee()->functions->assign_parameters($key);
+							$sparam = ee('Variables/Parser')->parseTagParameters($key);
 
 							$sw = '';
 
@@ -2977,7 +2977,7 @@ class Wiki {
 
 			$output = '';
 			$count = 0;
-			$vars = ee()->functions->assign_variables($match['2']);
+			$vars = ee('Variables/Parser')->extractVariables($match['2']);
 
 			foreach ($query->result() as $row)
 			{
@@ -2998,7 +2998,7 @@ class Wiki {
 
 					if (preg_match("/^switch\s*=.+/i", $key))
 					{
-						$sparam = ee()->functions->assign_parameters($key);
+						$sparam = ee('Variables/Parser')->parseTagParameters($key);
 
 						$sw = '';
 
@@ -3125,7 +3125,7 @@ class Wiki {
 			$header		= '';
 			$footer		= '';
 
-			extract(ee()->functions->assign_parameters($match[1], array(
+			extract(ee('Variables/Parser')->parseTagParameters($match[1], array(
 				'backspace'	=> '',
 				'style'		=> ''
 			)));
@@ -3194,7 +3194,7 @@ class Wiki {
 			$header		= '';
 			$footer		= '';
 
-			$parameters = ee()->functions->assign_parameters($match[1], array(
+			$parameters = ee('Variables/Parser')->parseTagParameters($match[1], array(
 				'limit'		=> 100,
 				'backspace'	=> '',
 				'paginate'	=> 'bottom'
@@ -4260,7 +4260,7 @@ class Wiki {
 		/**  Parameters
 		/** ----------------------------------------*/
 
-		$parameters = ee()->functions->assign_parameters($match[1], array(
+		$parameters = ee('Variables/Parser')->parseTagParameters($match[1], array(
 			'limit'		=> 20,
 			'paginate'	=> 'bottom',
 			'switch'	=> ''
@@ -4610,7 +4610,7 @@ class Wiki {
 		}
 
 		// Fetch parameters
-		extract(ee()->functions->assign_parameters($match[1], array(
+		extract(ee('Variables/Parser')->parseTagParameters($match[1], array(
 			'limit'		=> 20,
 			'paginate'	=> 'bottom',
 			'orderby'	=> 'file_name',
