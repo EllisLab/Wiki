@@ -2,7 +2,7 @@
 
 return array(
 	'author'      => 'EllisLab',
-	'author_url'  => 'http://ellislab.com/',
+	'author_url'  => 'https://expressionengine.com/',
 	'name'        => 'Wiki',
 	'description' => '',
 	'version'     => '4.0.0',

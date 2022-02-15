@@ -252,38 +252,37 @@ class Wiki {
 
 		if ( ! empty($this->upload_dir) && is_numeric($this->upload_dir))
 		{
-			$query = ee()->db->query("SELECT COUNT(*) AS count FROM exp_upload_prefs
-								 WHERE id = '".ee()->db->escape_str($this->upload_dir)."'");
+			
+	        // Check they have permission for this directory and get directory info
+			ee()->load->library('filemanager');
+	        $upload_directory = ee()->filemanager->fetch_upload_dir_prefs($this->upload_dir);
 
-			if ($query->row('count')  > 0)
+	        // If this directory doesn't exist then we can't do anything
+	        if (! empty($upload_directory)) {
+					
+			$this->valid_upload_dir = 'y';
+			$this->can_upload = 'y';
+			
+			
+			
+
+			if ($this->has_role(array(2, 3, 4), TRUE))
 			{
-				$this->valid_upload_dir = 'y';
-				$this->can_upload = 'y';
+				$this->can_upload = 'n';
+			}
+			elseif (! ee('Permission')->isSuperAdmin())
+			{
+	            ee()->db->select('upload_id');
+				ee()->db->where_in('role_id', $this->get_role_ids());
+	            $access = ee()->db->get_where('upload_prefs_roles', array('upload_id' => $this->upload_dir));
 
-				if (in_array(ee()->session->userdata['group_id'], array(2, 3, 4)))
-				{
+	            if ($access->num_rows() == 0) {	
 					$this->can_upload = 'n';
 				}
-				elseif (ee()->session->userdata['group_id'] != 1)
-				{
-					$query = ee()->db->query("SELECT upload_id FROM exp_upload_no_access WHERE member_group = '".ee()->session->userdata['group_id']."'");
-
-					if ($query->num_rows() > 0)
-					{
-						foreach($query->result_array() as $row)
-						{
-							if ($query->row('upload_id') == $this->upload_dir)
-							{
-								$this->can_upload = 'n';
-								break;
-							}
-						}
-					}
-				}
-			}
+			}		
 		}
-
-
+		}
+		
 		/** ----------------------------------------
 		/**  Set theme, load file helper
 		/** ----------------------------------------*/
@@ -477,7 +476,7 @@ class Wiki {
 			$this->return_data = $this->_deny_if('logged_out', $this->return_data);
 		}
 
-		if (in_array(ee()->session->userdata['group_id'], $this->admins))
+		if ($this->has_role($this->admins))
 		{
 			$this->return_data = $this->_deny_if('cannot_admin', $this->return_data);
 			$this->return_data = $this->_allow_if('can_admin', $this->return_data);
@@ -611,6 +610,46 @@ class Wiki {
 		$this->return_data = $this->_deny_if('redirect_page', $this->return_data);
 
 	}
+	
+
+    public function has_role($roles, $strict = FALSE)
+	{
+		if (ee('Permission')->isSuperAdmin() && $strict = FALSE) {
+ 			return TRUE;
+		}
+		
+		$user_role_ids = $this->get_role_ids();
+		
+		if (! empty(array_intersect($user_role_ids, $roles))) {
+			return TRUE;
+		}
+		
+		return FALSE;
+	}
+	
+    public function get_role_ids()
+	{	
+		$role_ids = array(0);
+        $member_id = ee()->session->userdata('member_id');
+
+		if (empty($member_id)) {
+			return array(0);
+		}
+
+        $member = ee('Model')
+            ->get('Member', $member_id)
+            ->with('PrimaryRole', 'Roles', 'RoleGroups')
+            ->first();
+
+        if (!$member) {
+            return array(0);
+        }
+
+		return $member->getAllRoles()->pluck('role_id');
+    }
+
+
+
 
 	// --------------------------------------------------------------------
 
@@ -635,7 +674,7 @@ class Wiki {
 	/**  Redirect for the Wiki
 	/** ----------------------------------------*/
 
-	function redirect($namespace='', $title)
+	public function redirect($namespace='', $title)
 	{
 		ee()->functions->redirect($this->create_url($namespace, $title));
 		exit;
@@ -716,7 +755,7 @@ class Wiki {
 	/**  Create Valid Topic Name
 	/** ----------------------------------------*/
 
-	function valid_title($str)
+	public function valid_title($str)
 	{
 		// Remove all numeric entities
 		$str = preg_replace('/&#x([0-9a-f]{2,5});{0,1}|&#([0-9]{2,4});{0,1}/', '', $str);
@@ -899,7 +938,6 @@ class Wiki {
 	}
 
 
-
 	/** ----------------------------------------
 	/**  File
 	/** ----------------------------------------*/
@@ -915,7 +953,7 @@ class Wiki {
 
 		if (isset($this->seg_parts['1']) && strtolower($this->seg_parts['1']) == 'delete')
 		{
-			if ($this->can_upload == 'y' && in_array(ee()->session->userdata['group_id'], $this->admins))
+			if ($this->can_upload == 'y' && $this->has_role($this->admins))
 			{
 				ee('Model')->get('wiki:Upload')
 				->filter('file_name', $topic)
@@ -1020,7 +1058,7 @@ class Wiki {
 		{
 			$file_url = $this->base_url.$query->row('file_hash');
 
-			if (in_array(ee()->session->userdata['group_id'], $this->admins))
+			if ($this->has_role($this->admins))
 			{
 				$delete_url = $this->base_url.$this->file_ns.':'.$query->row('file_name').'/delete';
 			}
@@ -1035,7 +1073,7 @@ class Wiki {
 		/**  Can User Edit File?
 		/** ----------------------------------------*/
 
-		if(in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins))
+		if($this->has_role($this->users) OR $this->has_role($this->admins))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -1158,7 +1196,7 @@ class Wiki {
 	 * @access	public
 	 * @return	void
 	 */
-	function wiki_css()
+	public function wiki_css()
 	{
 		// reset!  We just want the CSS
 		$this->return_data = $this->_fetch_template('wiki_style.css');
@@ -1434,7 +1472,7 @@ class Wiki {
 	/**  Recent Changes Processing
 	/** ----------------------------------------*/
 
-	function recent_changes($type='')
+	public function recent_changes($type='')
 	{
 		/** ----------------------------------------
 		/**  Load Template, Check for Valid Tag
@@ -2058,7 +2096,7 @@ class Wiki {
 	/**  Edit
 	/** ----------------------------------------*/
 
-	function edit($title)
+	public function edit($title)
 	{
 		/** ----------------------------------------
 		/**  Revision Edit
@@ -2145,7 +2183,7 @@ class Wiki {
 			$this->return_data = $this->_deny_if('can_edit', $this->return_data);
 			$this->return_data = $this->_allow_if('cannot_edit', $this->return_data);
 		}
-		elseif($query->num_rows() == 0 && (in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins)))
+		elseif($query->num_rows() == 0 && ($this->has_role($this->users) OR $this->has_role($this->admins)))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -2155,12 +2193,12 @@ class Wiki {
 			$this->return_data = $this->_deny_if('can_edit', $this->return_data);
 			$this->return_data = $this->_allow_if('cannot_edit', $this->return_data);
 		}
-		elseif($query->row('page_locked')  != 'y' && (in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins)))
+		elseif($query->row('page_locked')  != 'y' && ($this->has_role($this->users) OR $this->has_role($this->admins)))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
 		}
-		elseif($query->row('page_locked')  == 'y' && in_array(ee()->session->userdata['group_id'], $this->admins))
+		elseif($query->row('page_locked')  == 'y' && $this->has_role($this->admins))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -2352,12 +2390,12 @@ class Wiki {
 		/*  Everyone Else, No EDIT!
 		/* ----------------------------------------*/
 
-		if($query->row('page_locked')  != 'y' && (in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins)))
+		if($query->row('page_locked')  != 'y' && ($this->has_role($this->users) OR $this->has_role($this->admins)))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
 		}
-		elseif($query->row('page_locked')  == 'y' && in_array(ee()->session->userdata['group_id'], $this->admins))
+		elseif($query->row('page_locked')  == 'y' && $this->has_role($this->admins))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -2437,7 +2475,7 @@ class Wiki {
 
 		if ($query->num_rows() > 0)
 		{
-			$xsql = (in_array(ee()->session->userdata['group_id'], $this->admins)) ? '' : " AND r.revision_status = 'open' ";
+			$xsql = ($this->has_role($this->admins)) ? '' : " AND r.revision_status = 'open' ";
 
 			$results = ee()->db->query("SELECT r.*, m.screen_name
 									FROM exp_wiki_revisions r, exp_members m
@@ -2495,17 +2533,17 @@ class Wiki {
 		/*  Everyone Else, No EDIT!
 		/* ----------------------------------------*/
 
-		if($query->num_rows() == 0 && (in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins)))
+		if($query->num_rows() == 0 && ($this->has_role($this->users) OR $this->has_role($this->admins)))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
 		}
-		elseif($query->row('page_locked')  != 'y' && (in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins)))
+		elseif($query->row('page_locked')  != 'y' && ($this->has_role($this->users) OR $this->has_role($this->admins)))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
 		}
-		elseif($query->row('page_locked')  == 'y' && in_array(ee()->session->userdata['group_id'], $this->admins))
+		elseif($query->row('page_locked')  == 'y' && $this->has_role($this->admins))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -2633,7 +2671,7 @@ class Wiki {
 		/*  Everyone Else, No EDIT!
 		/* ----------------------------------------*/
 
-		if(in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins))
+		if($this->has_role($this->users) OR $this->has_role($this->admins))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -2677,7 +2715,7 @@ class Wiki {
 	/**  Article
 	/** ----------------------------------------*/
 
-	function article($title)
+	public function article($title)
 	{
 		$redirects = array();
 
@@ -2721,12 +2759,12 @@ class Wiki {
 			/*  Everyone Else, No EDIT!
 			/* ----------------------------------------*/
 
-			if($query->row('page_locked')  != 'y' && (in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins)))
+			if($query->row('page_locked')  != 'y' && ($this->has_role($this->users) OR $this->has_role($this->admins)))
 			{
 				$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 				$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
 			}
-			elseif($query->row('page_locked')  == 'y' && in_array(ee()->session->userdata['group_id'], $this->admins))
+			elseif($query->row('page_locked')  == 'y' && $this->has_role($this->admins))
 			{
 				$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 				$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -2859,12 +2897,12 @@ class Wiki {
 		/*  Everyone Else, No EDIT!
 		/* ----------------------------------------*/
 
-		if($query->row('page_locked')  != 'y' && (in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins)))
+		if($query->row('page_locked')  != 'y' && ($this->has_role($this->users) OR $this->has_role($this->admins)))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
 		}
-		elseif($query->row('page_locked')  == 'y' && in_array(ee()->session->userdata['group_id'], $this->admins))
+		elseif($query->row('page_locked')  == 'y' && $this->has_role($this->admins))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -3287,7 +3325,7 @@ class Wiki {
 	/**  Parse Dates Out of String
 	/** ----------------------------------------*/
 
-	function parse_dates($str)
+	public function parse_dates($str)
 	{
 		$dates = array();
 
@@ -3366,7 +3404,7 @@ class Wiki {
 			return $this->article($title);
 		}
 
-		$xsql = (in_array(ee()->session->userdata['group_id'], $this->admins)) ? '' : " AND r.revision_status = 'open' ";
+		$xsql = ($this->has_role($this->admins)) ? '' : " AND r.revision_status = 'open' ";
 
 		$results = ee()->db->query("SELECT r.*, m.screen_name
 								FROM exp_wiki_revisions r, exp_members m
@@ -3434,12 +3472,12 @@ class Wiki {
 		/*  Everyone Else, No EDIT!
 		/* ----------------------------------------*/
 
-		if($query->row('page_locked')  != 'y' && (in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins)))
+		if($query->row('page_locked')  != 'y' && ($this->has_role($this->users) OR $this->has_role($this->admins)))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
 		}
-		elseif($query->row('page_locked')  == 'y' && in_array(ee()->session->userdata['group_id'], $this->admins))
+		elseif($query->row('page_locked')  == 'y' && $this->has_role($this->admins))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -3487,7 +3525,7 @@ class Wiki {
 
 			if ($v['1'] == 'y')
 			{
-				if (ee()->session->userdata['group_id'] == 1)
+				if (ee('Permission')->isSuperAdmin())
 				{
 					$temp = str_replace('{name}', $v['0'].'*', $temp);
 				}
@@ -3544,14 +3582,14 @@ class Wiki {
 	/** -------------------------------------
 	/**  Edit Article
 	/** -------------------------------------*/
-	function edit_article()
+	public function edit_article()
 	{
 		if (ee()->input->post('editing') === FALSE OR ee()->input->get_post('title') === FALSE OR ee()->input->get_post('title') == '' OR ee()->input->get_post('article_content') === FALSE)
 		{
 			return ee()->output->show_user_error('general', array(lang('invalid_permissions')));
 		}
 
-		if ( ! in_array(ee()->session->userdata['group_id'], $this->users) && ! in_array(ee()->session->userdata['group_id'], $this->admins))
+		if ( ! $this->has_role($this->users) && ! $this->has_role($this->admins))
 		{
 			return ee()->output->show_user_error('general', array(lang('invalid_permissions')));
 		}
@@ -3587,7 +3625,7 @@ class Wiki {
 						  'last_updated'	=> ee()->localize->now,
 						  'wiki_id'			=> $this->wiki_id);
 
-			if (in_array(ee()->session->userdata['group_id'], $this->admins))
+			if ($this->has_role($this->admins))
 			{
 				if (ee()->input->get_post('delete_article') == 'y' && $this->current_namespace == $this->category_ns)
 				{
@@ -3646,7 +3684,7 @@ class Wiki {
 		{
 			$page_id = $query->row('page_id') ;
 
-			if (ee()->input->get_post('delete_article') == 'y' && in_array(ee()->session->userdata['group_id'], $this->admins))
+			if (ee()->input->get_post('delete_article') == 'y' && $this->has_role($this->admins))
 			{
 				if ($this->current_namespace == $this->category_ns)
 				{
@@ -3682,12 +3720,12 @@ class Wiki {
 				$this->redirect('', $this->title);
 			}
 
-			if ($query->row('page_locked')  == 'y' && ! in_array(ee()->session->userdata['group_id'], $this->admins))
+			if ($query->row('page_locked')  == 'y' && ! $this->has_role($this->admins))
 			{
 				return ee()->output->show_user_error('general', array(lang('invalid_permissions')));
 			}
 
-			if ($query->row('page_moderated')  == 'y' && ! in_array(ee()->session->userdata['group_id'], $this->admins))
+			if ($query->row('page_moderated')  == 'y' && ! $this->has_role($this->admins))
 			{
 				$data = array('last_updated' => $query->row('last_updated') );
 			}
@@ -3701,7 +3739,7 @@ class Wiki {
 				$data['page_redirect'] = $this->valid_title(ee()->input->get_post('redirect'));
 			}
 
-			if (in_array(ee()->session->userdata['group_id'], $this->admins))
+			if ($this->has_role($this->admins))
 			{
 				$data['page_locked'] = (ee()->input->get_post('lock_article') == 'y') ? 'y' : 'n';
 				$data['page_moderated'] = (ee()->input->get_post('moderate_article') == 'y') ? 'y' : 'n';
@@ -3769,7 +3807,7 @@ class Wiki {
 							'page_content'		=> ee('Security/XSS')->clean($content)
 						  );
 
-		if ($query->num_rows() > 0 && $query->row('page_moderated')  == 'y' && ! in_array(ee()->session->userdata['group_id'], $this->admins))
+		if ($query->num_rows() > 0 && $query->row('page_moderated')  == 'y' && ! $this->has_role($this->admins))
 		{
 			$revision['revision_status'] = 'closed';
 		}
@@ -4786,7 +4824,7 @@ class Wiki {
 
 		if (ee()->input->post('upload') == 'y')
 		{
-			if( ! in_array(ee()->session->userdata('group_id'), $this->users) && ! in_array(ee()->session->userdata('group_id'), $this->admins))
+			if( ! $this->has_role($this->users) && ! $this->has_role($this->admins))
 			{
 				return FALSE;
 			}
@@ -4836,7 +4874,7 @@ class Wiki {
 			}
 			else
 			{
-				$config['xss_clean'] = (ee()->session->userdata('group_id') == 1) ? FALSE : TRUE;
+				$config['xss_clean'] = (ee('Permission')->isSuperAdmin()) ? FALSE : TRUE;
 			}
 
 			ee()->load->library('upload', $config);
@@ -4905,7 +4943,7 @@ class Wiki {
 		/**  Can User Edit Articles and Thus Upload?
 		/** ----------------------------------------*/
 
-		if (in_array(ee()->session->userdata['group_id'], $this->users) OR in_array(ee()->session->userdata['group_id'], $this->admins))
+		if ($this->has_role($this->users) OR $this->has_role($this->admins))
 		{
 			$this->return_data = $this->_allow_if('can_edit', $this->return_data);
 			$this->return_data = $this->_deny_if('cannot_edit', $this->return_data);
@@ -4949,7 +4987,7 @@ class Wiki {
 
 	function edit_limit()
 	{
-		if ( ! in_array(ee()->session->userdata['group_id'], $this->admins))
+		if ( ! $this->has_role($this->admins))
 		{
 			$query = ee()->db->query("SELECT COUNT(revision_id) AS count FROM exp_wiki_revisions
 								 WHERE revision_author = '".ee()->db->escape_str(ee()->session->userdata['member_id'])."'
@@ -4973,7 +5011,7 @@ class Wiki {
 
 	function open_close_revision($title, $revision_id, $new_status)
 	{
-		if (in_array(ee()->session->userdata['group_id'], $this->admins))
+		if ($this->has_role($this->admins))
 		{
 			$query = ee()->db->query("SELECT r.page_id, r.page_content, p.page_namespace FROM exp_wiki_revisions r, exp_wiki_page p
 								 WHERE r.revision_id = '".ee()->db->escape_str($revision_id)."'

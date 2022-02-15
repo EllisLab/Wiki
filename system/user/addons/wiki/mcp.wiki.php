@@ -242,11 +242,14 @@ class Wiki_mcp {
 
 	function get_member_groups()
 	{
-		$this->member_groups = ee('Model')->get('MemberGroup')
-			->filter('group_id', 'NOT IN', array(1,2,3,4))
-			->filter('site_id', ee()->config->item('site_id'))
-			->order('group_title')
-			->all();
+		// update for v6 return primary member roles
+		
+        $this->member_groups = ee('Model')->get('Role')
+            ->filter('role_id', 'NOT IN', array('2', '3', '4'))
+            ->order('name')
+            ->all();		
+	
+		
 	}
 
 	// -------------------------------------------------------------------------
@@ -464,7 +467,7 @@ class Wiki_mcp {
 		$member_group_options = array();
 		foreach ($this->member_groups as $group)
 		{
-			$member_group_options[$group->group_id] = $group->group_title;
+			$member_group_options[$group->role_id] = $group->name;
 		}
 
 
@@ -683,7 +686,7 @@ class Wiki_mcp {
 
 		foreach ($this->member_groups as $group)
 		{
-			$member_choices[$group->group_id] = $group->group_title;
+			$member_choices[$group->role_id] = $group->name;
 		}
 
 		$grid->setBlankRow($this->getGridRow($member_choices));
