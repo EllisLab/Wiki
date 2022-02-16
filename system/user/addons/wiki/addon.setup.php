@@ -5,7 +5,7 @@ return array(
 	'author_url'  => 'https://expressionengine.com/',
 	'name'        => 'Wiki',
 	'description' => '',
-	'version'     => '4.0.0',
+	'version'     => '5.0.0',
 	'namespace'   => 'User\Addons\Wiki',
 	'settings_exist' => TRUE,
 	'docs_url'    => 'https://github.com/EllisLab/Wiki/wiki',
