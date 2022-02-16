@@ -260,27 +260,22 @@ class Wiki {
 	        // If this directory doesn't exist then we can't do anything
 	        if (! empty($upload_directory)) {
 					
-			$this->valid_upload_dir = 'y';
-			$this->can_upload = 'y';
-			
-			
-			
+				$this->valid_upload_dir = 'y';
+				$this->can_upload = 'y';
 
-			if ($this->has_role(array(2, 3, 4), TRUE))
-			{
-				$this->can_upload = 'n';
-			}
-			elseif (! ee('Permission')->isSuperAdmin())
-			{
-	            ee()->db->select('upload_id');
-				ee()->db->where_in('role_id', $this->get_role_ids());
-	            $access = ee()->db->get_where('upload_prefs_roles', array('upload_id' => $this->upload_dir));
-
-	            if ($access->num_rows() == 0) {	
+				if ($this->has_role(array(2, 3, 4), TRUE)) {
 					$this->can_upload = 'n';
 				}
-			}		
-		}
+				elseif (! ee('Permission')->isSuperAdmin()) {
+	            	ee()->db->select('upload_id');
+					ee()->db->where_in('role_id', $this->get_role_ids());
+	            	$access = ee()->db->get_where('upload_prefs_roles', array('upload_id' => $this->upload_dir));
+
+	            	if ($access->num_rows() == 0) {	
+						$this->can_upload = 'n';
+					}
+				}		
+			}
 		}
 		
 		/** ----------------------------------------
@@ -614,11 +609,19 @@ class Wiki {
 
     public function has_role($roles, $strict = FALSE)
 	{
-		if (ee('Permission')->isSuperAdmin() && $strict = FALSE) {
+		if (ee()->session->userdata('member_id') == 0) {
+			return FALSE;
+		}
+		
+		if (ee('Permission')->isSuperAdmin() && $strict == FALSE) {
  			return TRUE;
 		}
 		
 		$user_role_ids = $this->get_role_ids();
+		
+		if (empty($user_role_ids)) {
+			return FALSE;
+		}		
 		
 		if (! empty(array_intersect($user_role_ids, $roles))) {
 			return TRUE;
@@ -629,23 +632,11 @@ class Wiki {
 	
     public function get_role_ids()
 	{	
-		$role_ids = array(0);
-        $member_id = ee()->session->userdata('member_id');
-
-		if (empty($member_id)) {
-			return array(0);
-		}
-
-        $member = ee('Model')
-            ->get('Member', $member_id)
-            ->with('PrimaryRole', 'Roles', 'RoleGroups')
-            ->first();
-
-        if (!$member) {
-            return array(0);
-        }
-
-		return $member->getAllRoles()->pluck('role_id');
+		$user =	ee()->session->getMember();
+		$user_role_ids = (empty($user)) ? array() : $user->getAllRoles()->pluck('role_id');
+		
+		return $user_role_ids;
+		
     }
 
 
