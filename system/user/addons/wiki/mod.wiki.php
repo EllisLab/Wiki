@@ -609,21 +609,11 @@ class Wiki {
 
     public function has_role($roles, $strict = FALSE)
 	{
-		if (ee()->session->userdata('member_id') == 0) {
-			return FALSE;
-		}
-		
 		if (ee('Permission')->isSuperAdmin() && $strict == FALSE) {
  			return TRUE;
 		}
-		
-		$user_role_ids = $this->get_role_ids();
-		
-		if (empty($user_role_ids)) {
-			return FALSE;
-		}		
-		
-		if (! empty(array_intersect($user_role_ids, $roles))) {
+
+		if (ee('Permission')->hasAnyRole($roles)) {
 			return TRUE;
 		}
 		
@@ -4849,7 +4839,7 @@ class Wiki {
 			$config = array(
 					'file_name'		=> $new_name,
 					'upload_path'	=> $server_path,
-					'max_size'		=> round($upload_prefs['max_size']/1024, 3),
+					'max_size'		=> round((int) $upload_prefs['max_size']/1024, 3),
 					'max_width'		=> $upload_prefs['max_width'],
 					'max_height'	=> $upload_prefs['max_height'],
 			);
