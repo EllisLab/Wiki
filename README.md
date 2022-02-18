@@ -6,6 +6,10 @@ The Wiki Module requires ExpressionEngine to function.
 
 ## Changelog
 
+### 5.0.0
+
+- Updated module to be 6.0 compatible
+
 ### 4.0.0
 
 - Updated module to be 4.0 compatible
