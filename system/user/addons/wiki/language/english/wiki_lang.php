@@ -29,12 +29,12 @@ $lang = array(
 
 'namespace_admins' => 'Admins',
 
-'namespace_admins_desc' => 'Member groups to administrate this namespace.<br>
+'namespace_admins_desc' => 'Member roles to administrate this namespace.<br>
 Super Administrators are automatically administrators.',
 
-'namespace_users_desc' => 'Member groups that can access this namespace',
+'namespace_users_desc' => 'Member roles that can access this namespace',
 
-'users_description' => 'Member groups that can access this wiki.',
+'users_description' => 'Member roles that can access this wiki.',
 
 'admins_description' => 'Member groups to administrate this wiki.<br>
 Super Administrators are automatically administrators.',
@@ -128,7 +128,7 @@ referencing the namespace.  Your short name should only contain word characters 
 
 'basepath_unset' => 'Base Path Parameter Not Set',
 
-'users' => 'Groups',
+'users' => 'Roles',
 
 'admins' => 'Administrators',
 

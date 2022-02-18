@@ -182,19 +182,16 @@ class Wiki_model extends CI_Model {
 	 */
 	function member_group_options()
 	{
-		$this->db->select('group_title, group_id');
-		$this->db->where_not_in('group_id', array('2', '3', '4'));
-		$this->db->where('site_id', $this->config->item('site_id'));
-		$query = $this->db->get('member_groups');
+		// update for v6, return roles
+		
+        $roles = ee('Model')->get('Role')
+            ->filter('role_id', 'NOT IN', array('2', '3', '4'))
+            ->order('name')
+            ->all()
+            ->getDictionary('role_id', 'name');
 
-		$options = array();
-
-		foreach($query->result() as $row)
-		{
-			$options[$row->group_id] = $row->group_title;
-		}
-
-		return $options;
+		return $roles;
+		
 	}
 
 	// ------------------------------------------------------------------------

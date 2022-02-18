@@ -24,7 +24,7 @@
  */
 class Wiki_upd {
 
-	var $version = '4.0.0';
+	var $version = '5.0.0';
 
 	/**
 	 * Module Installer
@@ -157,7 +157,7 @@ class Wiki_upd {
 	{
 		$query = ee()->db->query("SELECT module_id FROM exp_modules WHERE module_name = 'Wiki'");
 
-		$sql[] = "DELETE FROM exp_module_member_groups WHERE module_id = '".$query->row('module_id') ."'";
+		$sql[] = "DELETE FROM exp_module_member_roles WHERE module_id = '".$query->row('module_id') ."'";
 		$sql[] = "DELETE FROM exp_modules WHERE module_name = 'Wiki'";
 		$sql[] = "DELETE FROM exp_actions WHERE class = 'Wiki'";
 		$sql[] = "DROP TABLE IF EXISTS exp_wiki_page";
