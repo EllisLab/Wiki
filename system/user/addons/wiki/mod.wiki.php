@@ -51,6 +51,7 @@ class Wiki {
 	// Settings
 	var $wiki_id				= 1;
 	var $label_name				= 'EE Wiki';
+	var $short_name				= 'ee_wiki';
 	var $use_captchas 			= 'n';
 	var $text_format			= 'xhtml';
 	var $html_format			= 'safe';
@@ -655,7 +656,7 @@ class Wiki {
 	/**  Redirect for the Wiki
 	/** ----------------------------------------*/
 
-	public function redirect($namespace='', $title)
+	public function redirect($namespace='', $title='')
 	{
 		ee()->functions->redirect($this->create_url($namespace, $title));
 		exit;
@@ -667,8 +668,10 @@ class Wiki {
 	/**  Creat URL for the Wiki
 	/** ----------------------------------------*/
 
-	function create_url($namespace='', $title)
+	function create_url($namespace='', $title='')
 	{
+		if ($title == '') { return ''; }
+		
 		if ($namespace == '' && stristr($title, ':') && count($this->namespaces) > 0)
 		{
 			foreach($this->namespaces as $possible)
@@ -738,6 +741,10 @@ class Wiki {
 
 	public function valid_title($str)
 	{
+		if (empty($str)) {
+			return '';
+		}
+		
 		// Remove all numeric entities
 		$str = preg_replace('/&#x([0-9a-f]{2,5});{0,1}|&#([0-9]{2,4});{0,1}/', '', $str);
 

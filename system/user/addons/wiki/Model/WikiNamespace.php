@@ -48,7 +48,7 @@ class WikiNamespace extends Model {
 
 	protected static $_validation_rules = array(
 		'namespace_name' => 'required|validateShortName|uniqueWithinSiblings[Wiki,WikiNamespaces]',
-		'namespace_label'       => 'required|uniqueWithinSiblings[Wiki,WikiNamespaces]]'
+		'namespace_label'       => 'required|uniqueWithinSiblings[Wiki,WikiNamespaces]'
 	);
 
 
