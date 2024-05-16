@@ -110,6 +110,10 @@ class Wiki extends Model {
 	
 	public function validateShortName($key, $value, $params, $rule)
 	{
+		if (empty($value)) {
+			return '';
+		}		
+		
 		if (preg_match('/[^a-z0-9\-\_]/i', $value))
 		{
 			return 'invalid_short_name';
