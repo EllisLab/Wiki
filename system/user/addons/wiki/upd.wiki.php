@@ -24,7 +24,7 @@
  */
 class Wiki_upd {
 
-	var $version = '5.0.0';
+	var $version = '5.0.1';
 
 	/**
 	 * Module Installer

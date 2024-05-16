@@ -723,6 +723,10 @@ class Wiki {
 
 	function prep_title($str)
 	{
+		if (empty($str)) {
+			return '';
+		}		
+		
 		if (ee()->config->item('word_separator') == 'dash')
 		{
 			return str_replace(array('-', $this->cats_separator), array(' ', $this->cats_display_separator), $str);
