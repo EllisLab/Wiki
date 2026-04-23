@@ -28,6 +28,8 @@ class Wiki_lib {
 
 var $_base_url = '';
 
+	// Legacy CP helper retained for backward compatibility with older entry points.
+
 	public function __construct()
 	{
 		
@@ -387,12 +389,14 @@ var $_base_url = '';
 		$grid->setNoResultsText('no_namespaces', 'add_namespaces');
 		
 		$member_choices = array();
-		$member_groups = ee()->api->get('MemberGroup');
-		$member_groups = $member_groups->all();
+		$member_groups = ee('Model')->get('Role')
+			->filter('role_id', 'NOT IN', array('2', '3', '4'))
+			->order('name')
+			->all();
 		
 		foreach ($member_groups as $group)
 		{
-			$member_choices[$group->group_id] = $group->group_title;
+			$member_choices[$group->role_id] = $group->name;
 		}		
 
 		$grid->setBlankRow($this->getGridRow($member_choices));
@@ -407,13 +411,13 @@ var $_base_url = '';
 			foreach ($validation_data['rows'] as $row_id => $columns)
 			{
 				// Checkboxes may not be set
-				$ns_post_users = (isset($columns['namespace_userss'])) ? $columns['namespace_users'] : array();
+				$ns_post_users = (isset($columns['namespace_users'])) ? $columns['namespace_users'] : array();
 
 				$ns_post_admin = (isset($columns['namespace_admins'])) ? $columns['namespace_admins'] : array();
 
 				$namespaces[$row_id] = array(
 					// Fix this, multiple new rows won't namespace right
-					'id'           => str_replace('row_id_', '', $row_id),
+					'namespace_id'       => str_replace('row_id_', '', $row_id),
 					'namespace_label'   => $columns['namespace_label'],
 					'namespace_name'  => $columns['namespace_name'],
 					'namespace_users'  => $ns_post_users,
@@ -450,8 +454,10 @@ var $_base_url = '';
 // 467  Undefined index: namespace_id
 			foreach($namespaces as $namespace)
 			{
+				$row_identifier = (isset($namespace['namespace_id'])) ? $namespace['namespace_id'] : ((isset($namespace['id'])) ? $namespace['id'] : '');
+
 				$data[] = array(
-					'attrs' => array('row_id' => $namespace['namespace_id']),
+					'attrs' => array('row_id' => $row_identifier),
 					'columns' => $this->getGridRow($member_choices, $namespace),
 				);
 			}
@@ -516,7 +522,7 @@ var $_base_url = '';
 			$selected = (in_array($group_id, $namespace['namespace_admins'])) ? 'chosen' : '';
 			$check = ( ! empty($selected)) ? 'y' : '';
 			
-			$admin_checkboxes .= '<label class="choice block '. $selected.'">'.form_checkbox('namespace_admin[]', $group_id).' '.$group_name.'</label>'."\n";
+			$admin_checkboxes .= '<label class="choice block '. $selected.'">'.form_checkbox('namespace_admins[]', $group_id, $check).' '.$group_name.'</label>'."\n";
 		}		
 		
 		return array(

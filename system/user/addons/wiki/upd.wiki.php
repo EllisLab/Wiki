@@ -24,7 +24,7 @@
  */
 class Wiki_upd {
 
-	var $version = '5.0.1';
+	var $version = '6.0.0';
 
 	/**
 	 * Module Installer
@@ -309,7 +309,74 @@ class Wiki_upd {
 			ee()->db->delete('extensions', array('class' => 'Wiki_ext'));
 		}
 
+		if (version_compare($current, '5.1.0', '<'))
+		{
+			$this->normalizeRoleColumns('wikis', 'wiki_id', array('wiki_admins', 'wiki_users'));
+			$this->normalizeRoleColumns('wiki_namespaces', 'namespace_id', array('namespace_admins', 'namespace_users'));
+		}
+
 		return TRUE;
+	}
+
+	private function normalizeRoleColumns($table, $primary_key, array $columns)
+	{
+		if (! ee()->db->table_exists($table))
+		{
+			return;
+		}
+
+		$select = array_merge(array($primary_key), $columns);
+		$query = ee()->db->select($select)->get($table);
+
+		foreach ($query->result_array() as $row)
+		{
+			$update = array();
+			foreach ($columns as $column)
+			{
+				$current = isset($row[$column]) ? $row[$column] : '';
+				$normalized = $this->normalizeRoleList($current);
+				if ((string) $normalized !== (string) $current)
+				{
+					$update[$column] = $normalized;
+				}
+			}
+
+			if (! empty($update))
+			{
+				ee()->db->where($primary_key, $row[$primary_key]);
+				ee()->db->update($table, $update);
+			}
+		}
+	}
+
+	private function normalizeRoleList($value)
+	{
+		if ($value === FALSE || $value === NULL || $value === '')
+		{
+			return '';
+		}
+
+		$normalized = array();
+		$reserved = array('2' => TRUE, '3' => TRUE, '4' => TRUE);
+		$tokens = explode('|', trim((string) $value, "|\t\n\r\0\x0B "));
+		foreach ($tokens as $token)
+		{
+			$token = trim($token);
+			if ($token === '' || ! ctype_digit($token))
+			{
+				continue;
+			}
+
+			$token = (string) ((int) $token);
+			if (isset($reserved[$token]))
+			{
+				continue;
+			}
+
+			$normalized[$token] = $token;
+		}
+
+		return implode('|', array_values($normalized));
 	}
 
 }

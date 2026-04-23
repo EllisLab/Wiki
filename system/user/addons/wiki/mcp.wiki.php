@@ -43,7 +43,6 @@ class Wiki_mcp {
 		// set some properties
 		$this->_base_url = ee('CP/URL')->make('addons/settings/wiki');
 		ee()->load->library('form_validation');
-		ee()->load->library('wiki_lib');
 		ee()->load->model('addons_model');
 
 	}
@@ -374,8 +373,8 @@ class Wiki_mcp {
 		$wiki_users = ee()->input->post('wiki_users');
 		$wiki_moderation_emails = ee()->input->post('wiki_moderation_emails');
 
-		$wiki->wiki_admins = is_array($wiki_admins) ? $wiki_admins : (($wiki_admins === FALSE OR $wiki_admins === NULL OR $wiki_admins === '') ? array() : array((string) $wiki_admins));
-		$wiki->wiki_users = is_array($wiki_users) ? $wiki_users : (($wiki_users === FALSE OR $wiki_users === NULL OR $wiki_users === '') ? array() : array((string) $wiki_users));
+		$wiki->wiki_admins = $this->normalizePostedRoleIds($wiki_admins);
+		$wiki->wiki_users = $this->normalizePostedRoleIds($wiki_users);
 
 		$wiki_moderation_emails = ($wiki_moderation_emails === FALSE OR $wiki_moderation_emails === NULL) ? '' : (string) $wiki_moderation_emails;
 		$wiki->wiki_moderation_emails = explode(',', trim(preg_replace("/[\s,|]+/", ',', $wiki_moderation_emails), ','));
@@ -394,6 +393,14 @@ class Wiki_mcp {
 		}
 
 		$wiki_namespaces = ee()->input->post('wiki_namespaces_data');
+		if (! is_array($wiki_namespaces))
+		{
+			$wiki_namespaces = array();
+		}
+		if (! isset($wiki_namespaces['rows']) || ! is_array($wiki_namespaces['rows']))
+		{
+			$wiki_namespaces['rows'] = array();
+		}
 
 		$existing_ids = array();
 		$new_ids = array();
@@ -403,6 +410,10 @@ class Wiki_mcp {
 		{
 			foreach ($wiki_namespaces['rows'] as $row_id => $columns)
 			{
+				$columns['namespace_users'] = $this->normalizePostedRoleIds(isset($columns['namespace_users']) ? $columns['namespace_users'] : array());
+				$columns['namespace_admins'] = $this->normalizePostedRoleIds(isset($columns['namespace_admins']) ? $columns['namespace_admins'] : array());
+				$wiki_namespaces['rows'][$row_id] = $columns;
+
 				if (strpos($row_id, 'row_id_') !== FALSE)
 				{
 					$existing_ids[] = str_replace('row_id_', '', $row_id);
@@ -454,6 +465,40 @@ class Wiki_mcp {
 		}
 
 		return empty($this->wiki_errors);
+	}
+
+	private function normalizePostedRoleIds($value)
+	{
+		if ($value === FALSE || $value === NULL || $value === '')
+		{
+			return array();
+		}
+
+		if (! is_array($value))
+		{
+			$value = array($value);
+		}
+
+		$normalized = array();
+		$reserved = array('2' => TRUE, '3' => TRUE, '4' => TRUE);
+		foreach ($value as $role_id)
+		{
+			$role_id = trim((string) $role_id);
+			if ($role_id === '' || ! ctype_digit($role_id))
+			{
+				continue;
+			}
+
+			$role_id = (string) ((int) $role_id);
+			if (isset($reserved[$role_id]))
+			{
+				continue;
+			}
+
+			$normalized[$role_id] = $role_id;
+		}
+
+		return array_values($normalized);
 	}
 
 
