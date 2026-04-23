@@ -104,7 +104,7 @@ class Wiki_mcp {
 					array(
 						'toolbar_items' => array(
 							'edit' => array(
-								'href' => ee('CP/URL')->make('/cp/addons/settings/wiki/update'.AMP.'wiki_id='. $row->wiki_id),
+								'href' => ee('CP/URL')->make('addons/settings/wiki/update', array('wiki_id' => $row->wiki_id)),
 								'title' => lang('edit')
 							)
 						)
@@ -349,7 +349,7 @@ class Wiki_mcp {
 
 		$vars['sections'] = $this->make_form($wiki_id, $valid_wiki);
 
-		$vars['base_url'] = $this->_base_url.'/update/wiki&wiki_id='.$wiki_id;
+		$vars['base_url'] = ee('CP/URL')->make('addons/settings/wiki/update', array('wiki_id' => $wiki_id));
 		$vars['save_btn_text'] = 'btn_save_settings';
 		$vars['save_btn_text_working'] = 'btn_saving';
 		$vars['cp_page_title'] = lang('edit_wiki');

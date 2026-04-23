@@ -121,7 +121,7 @@ var $_base_url = '';
 
 		$vars['sections'] = $this->make_form($wiki_id, $valid_wiki);
 		
-		$vars['base_url'] = $this->_base_url.'/update/wiki&wiki_id='.$wiki_id;
+		$vars['base_url'] = ee('CP/URL')->make('addons/settings/wiki/update', array('wiki_id' => $wiki_id));
 		$vars['save_btn_text'] = 'btn_save_settings';
 		$vars['save_btn_text_working'] = 'btn_saving';
 		$vars['cp_page_title'] = lang('edit_wiki');
