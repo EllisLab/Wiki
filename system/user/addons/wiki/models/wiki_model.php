@@ -74,6 +74,11 @@ class Wiki_model extends CI_Model {
 	 */
 	function delete_wiki($wiki_id)
 	{
+		if ( ! is_array($wiki_id))
+		{
+			$wiki_id = array($wiki_id);
+		}
+
 		$this->db->where_in('wiki_id', $wiki_id);
 		$this->db->delete(array('wikis', 'wiki_page', 'wiki_revisions', 'wiki_categories'));
 
@@ -90,8 +95,13 @@ class Wiki_model extends CI_Model {
 	 * @param string	table to select from
 	 * @return object
 	 */
-	function select_max($field, $as = NULL, $table)
+	function select_max($field, $as = NULL, $table = NULL)
 	{
+		if ($table === NULL OR $table === '')
+		{
+			return FALSE;
+		}
+
 		$this->db->select_max($field, $as);
 
 		return $this->db->get($table);
@@ -203,8 +213,13 @@ class Wiki_model extends CI_Model {
 	 * @param string	name to check against
 	 * @return boolean
 	 */
-	function check_duplicate($id = NULL, $str)
+	function check_duplicate($id = NULL, $str = NULL)
 	{
+		if ($str === NULL)
+		{
+			return FALSE;
+		}
+
 		if ($id)
 		{
 			$this->db->where('wiki_id !=', $id);

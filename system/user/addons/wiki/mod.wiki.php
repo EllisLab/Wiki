@@ -3500,7 +3500,10 @@ class Wiki {
 			return $str;
 		}
 
-		if (count(ee()->stats->statdata()) == 0 OR count(ee()->stats->statdata('current_names')) == 0)
+		$statdata = ee()->stats->statdata();
+		$current_names = ee()->stats->statdata('current_names');
+
+		if ( ! is_countable($statdata) OR count($statdata) == 0 OR ! is_countable($current_names) OR count($current_names) == 0)
 		{
 			return str_replace($match['0'], '', $str);
 		}
@@ -3511,7 +3514,7 @@ class Wiki {
 
 		$names = '';
 
-		foreach (ee()->stats->statdata('current_names') as $k => $v)
+		foreach ($current_names as $k => $v)
 		{
 			$temp = $match['1'];
 
