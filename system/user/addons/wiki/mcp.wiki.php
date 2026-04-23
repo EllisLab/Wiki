@@ -370,7 +370,15 @@ class Wiki_mcp {
 	 */
 	private function validateWikiSettings($wiki)
 	{
-		$wiki->wiki_moderation_emails = explode(',', trim(preg_replace("/[\s,|]+/", ',', $_POST['wiki_moderation_emails']), ','));
+		$wiki_admins = ee()->input->post('wiki_admins');
+		$wiki_users = ee()->input->post('wiki_users');
+		$wiki_moderation_emails = ee()->input->post('wiki_moderation_emails');
+
+		$wiki->wiki_admins = is_array($wiki_admins) ? $wiki_admins : (($wiki_admins === FALSE OR $wiki_admins === NULL OR $wiki_admins === '') ? array() : array((string) $wiki_admins));
+		$wiki->wiki_users = is_array($wiki_users) ? $wiki_users : (($wiki_users === FALSE OR $wiki_users === NULL OR $wiki_users === '') ? array() : array((string) $wiki_users));
+
+		$wiki_moderation_emails = ($wiki_moderation_emails === FALSE OR $wiki_moderation_emails === NULL) ? '' : (string) $wiki_moderation_emails;
+		$wiki->wiki_moderation_emails = explode(',', trim(preg_replace("/[\s,|]+/", ',', $wiki_moderation_emails), ','));
 
 		// Clean up for MySQL strict mode
 		if ($wiki->wiki_upload_dir === '')
@@ -613,7 +621,7 @@ class Wiki_mcp {
 			'fields' => array(
 				'wiki_moderation_emails' => array(
 					'type' => 'text',
-					'value' =>  implode("\n", $wiki->wiki_moderation_emails)
+					'value' =>  (is_array($wiki->wiki_moderation_emails)) ? implode("\n", $wiki->wiki_moderation_emails) : (($wiki->wiki_moderation_emails === NULL) ? '' : (string) $wiki->wiki_moderation_emails)
 				)
 			)
 		);

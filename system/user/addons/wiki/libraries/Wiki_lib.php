@@ -628,7 +628,8 @@ var $_base_url = '';
 		{
 				if ($val == 'wiki_users' OR $val == 'wiki_admins')
 				{
-					$data[$val] = implode('|', ee()->input->get_post($val));
+					$value = ee()->input->get_post($val);
+					$data[$val] = is_array($value) ? implode('|', $value) : (($value === FALSE OR $value === NULL) ? '' : (string) $value);
 				}
 				elseif($val != 'wiki_namespaces_list')
 				{
@@ -769,4 +770,3 @@ var $_base_url = '';
 
 
 }
-
