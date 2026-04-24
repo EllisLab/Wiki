@@ -6,6 +6,14 @@ The Wiki Module requires ExpressionEngine to function.
 
 ## Changelog
 
+### 6.0.0
+- PHP 8.4 compatible
+- Fixed member role permission issues
+- Fixed install bug on newer PHP versioin
+- Fixed bad URLs in control panel when sessions used
+- Security improvements
+- Now requires EE v5+
+
 ### 5.0.0
 
 - Updated module to be 6.0 compatible

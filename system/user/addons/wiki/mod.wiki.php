@@ -29,8 +29,8 @@ class Wiki {
 	var $profile_path			= '';
 	var $base_url				= '';
 	var $seg_parts				= array();
-	var $admins					= array('1');
-	var $users					= array('1', '5');
+	var $admins					= array();
+	var $users					= array();
 	var $conditionals			= array();
 	var $title					= '';
 	var $topic					= '';
@@ -77,6 +77,9 @@ class Wiki {
 	var $parent_cats			= array();
 
 	var $return_data 			= '';
+	var $role_check_cache		= array();
+	var $cached_member_role_ids	= NULL;
+	var $cached_member_role_lookup = NULL;
 
 	/** ----------------------------------------
 	/**  Constructor
@@ -170,7 +173,7 @@ class Wiki {
 
 			if ($field == 'users' OR $field == 'admins')
 			{
-				$value = explode('|', $value);
+				$value = $this->normalizeConfiguredRoleIds($value);
 			}
 
 			$this->{$field} = $value;
@@ -190,8 +193,8 @@ class Wiki {
 
 				if (isset($this->seg_parts['0']) && strcasecmp($this->prep_title(substr($this->seg_parts['0'], 0, strlen($row['namespace_label'].':'))), $row['namespace_label'].':') == 0)
 				{
-					$this->admins = explode('|', $row['namespace_admins']);
-					$this->users  = explode('|', $row['namespace_users']);
+					$this->admins = $this->normalizeConfiguredRoleIds($row['namespace_admins']);
+					$this->users  = $this->normalizeConfiguredRoleIds($row['namespace_users']);
 				}
 			}
 		}
@@ -227,26 +230,6 @@ class Wiki {
 		/**  Tag Settings
 		/** ----------------------------------------*/
 
-		if ( ! in_array('1', $this->admins)) $this->admins[] = "1";
-
-		if ( ! in_array('1', $this->users)) $this->users[] = "1";
-
-		foreach($this->admins as $key => $value)
-		{
-			if (in_array($value, array('2', '3', '4')))
-			{
-				unset($this->admins[$key]);
-			}
-		}
-
-		foreach($this->users as $key => $value)
-		{
-			if (in_array($value, array('2', '3', '4')))
-			{
-				unset($this->users[$key]);
-			}
-		}
-
 		/** ----------------------------------------
 		/**  Valid Upload Directory?
 		/** ----------------------------------------*/
@@ -268,12 +251,18 @@ class Wiki {
 					$this->can_upload = 'n';
 				}
 				elseif (! ee('Permission')->isSuperAdmin()) {
-	            	ee()->db->select('upload_id');
-					ee()->db->where_in('role_id', $this->get_role_ids());
-	            	$access = ee()->db->get_where('upload_prefs_roles', array('upload_id' => $this->upload_dir));
+					$role_ids = $this->get_role_ids();
 
-	            	if ($access->num_rows() == 0) {	
+					if (empty($role_ids)) {
 						$this->can_upload = 'n';
+					} else {
+	            		ee()->db->select('upload_id');
+						ee()->db->where_in('role_id', $role_ids);
+	            		$access = ee()->db->get_where('upload_prefs_roles', array('upload_id' => $this->upload_dir));
+
+	            		if ($access->num_rows() == 0) {
+							$this->can_upload = 'n';
+						}
 					}
 				}		
 			}
@@ -610,25 +599,120 @@ class Wiki {
 
     public function has_role($roles, $strict = FALSE)
 	{
-		if (ee('Permission')->isSuperAdmin() && $strict == FALSE) {
+		if (ee('Permission')->isSuperAdmin() && $strict == FALSE)
+		{
  			return TRUE;
 		}
 
-		if (ee('Permission')->hasAnyRole($roles)) {
-			return TRUE;
+		$roles = $this->normalizeCheckRoleIds($roles);
+		if (empty($roles))
+		{
+			return FALSE;
 		}
-		
+
+		$cache_key = ($strict ? '1' : '0') . ':' . implode('|', $roles);
+		if (isset($this->role_check_cache[$cache_key]))
+		{
+			return $this->role_check_cache[$cache_key];
+		}
+
+		$member_roles = $this->getCurrentMemberRoleLookupCached();
+		foreach ($roles as $role_id)
+		{
+			if (isset($member_roles[$role_id]))
+			{
+				$this->role_check_cache[$cache_key] = TRUE;
+				return TRUE;
+			}
+		}
+
+		$this->role_check_cache[$cache_key] = FALSE;
 		return FALSE;
 	}
 	
     public function get_role_ids()
-	{	
-		$user =	ee()->session->getMember();
-		$user_role_ids = (empty($user)) ? array() : $user->getAllRoles()->pluck('role_id');
-		
-		return $user_role_ids;
-		
+	{
+		return $this->getCurrentMemberRoleIdsCached();
     }
+
+	private function getCurrentMemberRoleIdsCached()
+	{
+		if (is_array($this->cached_member_role_ids))
+		{
+			return $this->cached_member_role_ids;
+		}
+
+		$user = ee()->session->getMember();
+		if (empty($user))
+		{
+			$this->cached_member_role_ids = array();
+			return $this->cached_member_role_ids;
+		}
+
+		$this->cached_member_role_ids = $this->normalizeCheckRoleIds($user->getAllRoles()->pluck('role_id'));
+
+		return $this->cached_member_role_ids;
+	}
+
+	private function getCurrentMemberRoleLookupCached()
+	{
+		if (is_array($this->cached_member_role_lookup))
+		{
+			return $this->cached_member_role_lookup;
+		}
+
+		$this->cached_member_role_lookup = array_fill_keys($this->getCurrentMemberRoleIdsCached(), TRUE);
+		return $this->cached_member_role_lookup;
+	}
+
+	private function normalizeConfiguredRoleIds($value, $drop_reserved = TRUE)
+	{
+		$roles = $this->normalizeCheckRoleIds($value);
+		if (! $drop_reserved)
+		{
+			return $roles;
+		}
+
+		$reserved = array('2' => TRUE, '3' => TRUE, '4' => TRUE);
+		$normalized = array();
+		foreach ($roles as $role_id)
+		{
+			if (! isset($reserved[$role_id]))
+			{
+				$normalized[] = $role_id;
+			}
+		}
+
+		return $normalized;
+	}
+
+	private function normalizeCheckRoleIds($roles)
+	{
+		if ($roles === FALSE || $roles === NULL || $roles === '')
+		{
+			return array();
+		}
+
+		if (! is_array($roles))
+		{
+			$roles = explode('|', (string) $roles);
+		}
+
+		$normalized = array();
+		foreach ($roles as $role_id)
+		{
+			$role_id = trim((string) $role_id);
+			if ($role_id === '' || ! ctype_digit($role_id))
+			{
+				continue;
+			}
+
+			$role_id = (string) ((int) $role_id);
+			$normalized[$role_id] = $role_id;
+		}
+
+		return array_values($normalized);
+	}
 
 
 
@@ -874,7 +958,8 @@ class Wiki {
 		/** ----------------------------------------*/
 
 		$query = ee()->db->query("SELECT * FROM exp_wiki_uploads
-							 WHERE file_name = '".ee()->db->escape_str($topic)."'");
+							 WHERE file_name = '".ee()->db->escape_str($topic)."'
+							 AND wiki_id = '".ee()->db->escape_str($this->wiki_id)."'");
 
 		if ($query->num_rows() == 0)
 		{
@@ -945,10 +1030,16 @@ class Wiki {
 
 		if (isset($this->seg_parts['1']) && strtolower($this->seg_parts['1']) == 'delete')
 		{
+			if (! $this->isValidGetCsrfToken())
+			{
+				return $this->showCsrfNotAuthorized();
+			}
+
 			if ($this->can_upload == 'y' && $this->has_role($this->admins))
 			{
 				ee('Model')->get('wiki:Upload')
 				->filter('file_name', $topic)
+				->filter('wiki_id', $this->wiki_id)
 				->delete();
 
 
@@ -1052,7 +1143,7 @@ class Wiki {
 
 			if ($this->has_role($this->admins))
 			{
-				$delete_url = $this->base_url.$this->file_ns.':'.$query->row('file_name').'/delete';
+				$delete_url = $this->addCsrfTokenToUrl($this->base_url.$this->file_ns.':'.$query->row('file_name').'/delete');
 			}
 		}
 
@@ -2591,8 +2682,8 @@ class Wiki {
 									'{revision_status}'		=> $row['revision_status'],
 									'{path:member_profile}'	=> ee()->functions->create_url($this->profile_path.$row['revision_author']),
 									'{path:revision_link}'	=> $this->base_url.$title.'/revision/'.$row['revision_id'],
-									'{path:close_revision}'	=> $this->base_url.$title.'/revision/'.$row['revision_id'].'/close',
-									'{path:open_revision}'	=> $this->base_url.$title.'/revision/'.$row['revision_id'].'/open',
+									'{path:close_revision}'	=> $this->addCsrfTokenToUrl($this->base_url.$title.'/revision/'.$row['revision_id'].'/close'),
+									'{path:open_revision}'	=> $this->addCsrfTokenToUrl($this->base_url.$title.'/revision/'.$row['revision_id'].'/open'),
 									'{count}'				=> $count);
 
 					$temp = $this->prep_conditionals($temp, $data);
@@ -3383,9 +3474,17 @@ class Wiki {
 						return;
 					break;
 					case 'open' :
+						if (! $this->isValidGetCsrfToken())
+						{
+							return $this->showCsrfNotAuthorized();
+						}
 						$this->open_close_revision($title, $revision_id, 'open');
 					break;
 					case 'close' :
+						if (! $this->isValidGetCsrfToken())
+						{
+							return $this->showCsrfNotAuthorized();
+						}
 						$this->open_close_revision($title, $revision_id, 'closed');
 					break;
 				}
@@ -3500,7 +3599,10 @@ class Wiki {
 			return $str;
 		}
 
-		if (count(ee()->stats->statdata()) == 0 OR count(ee()->stats->statdata('current_names')) == 0)
+		$statdata = ee()->stats->statdata();
+		$current_names = ee()->stats->statdata('current_names');
+
+		if ( ! is_countable($statdata) OR count($statdata) == 0 OR ! is_countable($current_names) OR count($current_names) == 0)
 		{
 			return str_replace($match['0'], '', $str);
 		}
@@ -3511,7 +3613,7 @@ class Wiki {
 
 		$names = '';
 
-		foreach (ee()->stats->statdata('current_names') as $k => $v)
+		foreach ($current_names as $k => $v)
 		{
 			$temp = $match['1'];
 
@@ -3909,12 +4011,14 @@ class Wiki {
 							 WHERE page_id = '".ee()->db->escape_str($page_id)."'
 							 AND wiki_id = '".ee()->db->escape_str($this->wiki_id)."'");
 
-		if ($query->row('count')  > $this->revision_limit)
+		$revision_limit = max(1, (int) $this->revision_limit);
+
+		if ($query->row('count')  > $revision_limit)
 		{
 			$query = ee()->db->query("SELECT revision_id FROM exp_wiki_revisions
 								 WHERE page_id = '".ee()->db->escape_str($page_id)."'
 								 AND wiki_id = '".ee()->db->escape_str($this->wiki_id)."'
-								 LIMIT $this->revision_limit, 1");
+								 LIMIT $revision_limit, 1");
 
 			if ($query->num_rows() > 0)
 			{
@@ -5003,6 +5107,11 @@ class Wiki {
 
 	function open_close_revision($title, $revision_id, $new_status)
 	{
+		if (! $this->isValidGetCsrfToken())
+		{
+			return $this->showCsrfNotAuthorized();
+		}
+
 		if ($this->has_role($this->admins))
 		{
 			$query = ee()->db->query("SELECT r.page_id, r.page_content, p.page_namespace FROM exp_wiki_revisions r, exp_wiki_page p
@@ -5041,6 +5150,49 @@ class Wiki {
 		ee()->functions->clear_caching('db');
 
 		$this->redirect('', $title);
+	}
+
+	private function isValidGetCsrfToken()
+	{
+		$request_method = ee()->input->server('REQUEST_METHOD');
+		if ($request_method !== 'GET')
+		{
+			return TRUE;
+		}
+
+		if (bool_config_item('disable_csrf_protection'))
+		{
+			return TRUE;
+		}
+
+		if (! defined('CSRF_TOKEN'))
+		{
+			return FALSE;
+		}
+
+		$token = ee()->input->get('csrf_token');
+		if (! $token)
+		{
+			$token = ee()->input->get('XID');
+		}
+
+		return ($token === CSRF_TOKEN);
+	}
+
+	private function showCsrfNotAuthorized()
+	{
+		return ee()->output->show_form_error(array('general' => lang('not_authorized')));
+	}
+
+	private function addCsrfTokenToUrl($url)
+	{
+		if (bool_config_item('disable_csrf_protection') || ! defined('CSRF_TOKEN'))
+		{
+			return $url;
+		}
+
+		$separator = (strpos($url, '?') === FALSE) ? '?' : '&';
+		return $url . $separator . 'csrf_token=' . rawurlencode(CSRF_TOKEN);
 	}
 
 

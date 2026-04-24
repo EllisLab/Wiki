@@ -43,7 +43,6 @@ class Wiki_mcp {
 		// set some properties
 		$this->_base_url = ee('CP/URL')->make('addons/settings/wiki');
 		ee()->load->library('form_validation');
-		ee()->load->library('wiki_lib');
 		ee()->load->model('addons_model');
 
 	}
@@ -105,7 +104,7 @@ class Wiki_mcp {
 					array(
 						'toolbar_items' => array(
 							'edit' => array(
-								'href' => ee('CP/URL')->make('/cp/addons/settings/wiki/update'.AMP.'wiki_id='. $row->wiki_id),
+								'href' => ee('CP/URL')->make('addons/settings/wiki/update', array('wiki_id' => $row->wiki_id)),
 								'title' => lang('edit')
 							)
 						)
@@ -350,7 +349,7 @@ class Wiki_mcp {
 
 		$vars['sections'] = $this->make_form($wiki_id, $valid_wiki);
 
-		$vars['base_url'] = $this->_base_url.'/update/wiki&wiki_id='.$wiki_id;
+		$vars['base_url'] = ee('CP/URL')->make('addons/settings/wiki/update', array('wiki_id' => $wiki_id));
 		$vars['save_btn_text'] = 'btn_save_settings';
 		$vars['save_btn_text_working'] = 'btn_saving';
 		$vars['cp_page_title'] = lang('edit_wiki');
@@ -370,7 +369,15 @@ class Wiki_mcp {
 	 */
 	private function validateWikiSettings($wiki)
 	{
-		$wiki->wiki_moderation_emails = explode(',', trim(preg_replace("/[\s,|]+/", ',', $_POST['wiki_moderation_emails']), ','));
+		$wiki_admins = ee()->input->post('wiki_admins');
+		$wiki_users = ee()->input->post('wiki_users');
+		$wiki_moderation_emails = ee()->input->post('wiki_moderation_emails');
+
+		$wiki->wiki_admins = $this->normalizePostedRoleIds($wiki_admins);
+		$wiki->wiki_users = $this->normalizePostedRoleIds($wiki_users);
+
+		$wiki_moderation_emails = ($wiki_moderation_emails === FALSE OR $wiki_moderation_emails === NULL) ? '' : (string) $wiki_moderation_emails;
+		$wiki->wiki_moderation_emails = explode(',', trim(preg_replace("/[\s,|]+/", ',', $wiki_moderation_emails), ','));
 
 		// Clean up for MySQL strict mode
 		if ($wiki->wiki_upload_dir === '')
@@ -386,6 +393,14 @@ class Wiki_mcp {
 		}
 
 		$wiki_namespaces = ee()->input->post('wiki_namespaces_data');
+		if (! is_array($wiki_namespaces))
+		{
+			$wiki_namespaces = array();
+		}
+		if (! isset($wiki_namespaces['rows']) || ! is_array($wiki_namespaces['rows']))
+		{
+			$wiki_namespaces['rows'] = array();
+		}
 
 		$existing_ids = array();
 		$new_ids = array();
@@ -395,6 +410,10 @@ class Wiki_mcp {
 		{
 			foreach ($wiki_namespaces['rows'] as $row_id => $columns)
 			{
+				$columns['namespace_users'] = $this->normalizePostedRoleIds(isset($columns['namespace_users']) ? $columns['namespace_users'] : array());
+				$columns['namespace_admins'] = $this->normalizePostedRoleIds(isset($columns['namespace_admins']) ? $columns['namespace_admins'] : array());
+				$wiki_namespaces['rows'][$row_id] = $columns;
+
 				if (strpos($row_id, 'row_id_') !== FALSE)
 				{
 					$existing_ids[] = str_replace('row_id_', '', $row_id);
@@ -446,6 +465,40 @@ class Wiki_mcp {
 		}
 
 		return empty($this->wiki_errors);
+	}
+
+	private function normalizePostedRoleIds($value)
+	{
+		if ($value === FALSE || $value === NULL || $value === '')
+		{
+			return array();
+		}
+
+		if (! is_array($value))
+		{
+			$value = array($value);
+		}
+
+		$normalized = array();
+		$reserved = array('2' => TRUE, '3' => TRUE, '4' => TRUE);
+		foreach ($value as $role_id)
+		{
+			$role_id = trim((string) $role_id);
+			if ($role_id === '' || ! ctype_digit($role_id))
+			{
+				continue;
+			}
+
+			$role_id = (string) ((int) $role_id);
+			if (isset($reserved[$role_id]))
+			{
+				continue;
+			}
+
+			$normalized[$role_id] = $role_id;
+		}
+
+		return array_values($normalized);
 	}
 
 
@@ -613,7 +666,7 @@ class Wiki_mcp {
 			'fields' => array(
 				'wiki_moderation_emails' => array(
 					'type' => 'text',
-					'value' =>  implode("\n", $wiki->wiki_moderation_emails)
+					'value' =>  (is_array($wiki->wiki_moderation_emails)) ? implode("\n", $wiki->wiki_moderation_emails) : (($wiki->wiki_moderation_emails === NULL) ? '' : (string) $wiki->wiki_moderation_emails)
 				)
 			)
 		);
